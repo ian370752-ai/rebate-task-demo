@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+<title>积分返利任务 · 高保真交互 Demo · 药师帮 SCM</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<header class="top-header">
+  <div class="brand"><div class="brand-logo">药</div><span class="brand-name">药师帮</span></div>
+  <div class="erp"><b>采药易</b><span>ERP连接正常</span></div>
+  <input class="global-search" placeholder="搜索页面" />
+  <nav class="top-links">
+    <a>化妆品质量公告汇总（2026 第26期）</a><a>规则中心</a><a>下载APP</a><a>导出任务列表</a>
+    <span class="top-user">yuanyihaosun <span class="muted">▾</span></span>
+  </nav>
+</header>
+
+<div class="shell">
+  <aside class="sidebar" id="rail"></aside>
+  <aside class="submenu" id="submenu"></aside>
+  <div class="main">
+    <div class="tabs" id="tabs"></div>
+    <main class="content">
+      <section class="screen on" id="s0"></section>
+      <section class="screen" id="sA"><div id="formRoot"></div></section>
+      <section class="screen" id="sB"><div id="bRoot"></div></section>
+      <section class="screen" id="sC"><div id="detailRoot"></div></section>
+      <section class="screen" id="sP"><div id="adminRoot"></div></section>
+    </main>
+  </div>
+</div>
+
+<div class="float-service">
+  <div class="fs-btn o" title="官方客服"><b>✿</b>官方客服</div>
+  <div class="fs-btn b" title="在线客服"><b>◉</b>在线客服</div>
+</div>
+
+<div class="mask" id="mask" data-close="1"><div class="modal" id="modal"></div></div>
+<div id="toast"><div class="toast-inner"><span class="ti">✓</span><span id="toastMsg"></span></div></div>
+<div class="chart-tip" id="chartTip"></div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
