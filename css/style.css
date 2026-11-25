@@ -160,6 +160,9 @@
   .form-foot .btn-group{display:flex;gap:10px}
 
   /* ===== Screen C detail ===== */
+  .crumb{font-size:12px;color:#9aa4b2;margin-bottom:10px}
+  .crumb a{color:#5b6675;cursor:pointer}
+  .crumb a:hover{color:var(--primary)}
   .detail-head{background:#fff;border:1px solid #e9edf2;border-radius:var(--radius);padding:12px 18px;margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
   .detail-head h2{font-size:15px;font-weight:700}
   .obj-meta{font-size:12px;color:#8a94a6;margin-left:auto;display:flex;gap:18px;flex-wrap:wrap}
