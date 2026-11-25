@@ -39,7 +39,7 @@ const DETAIL={};SEED.forEach(t=>DETAIL[t.id]=makeDetails(t));
 let TASKS=SEED.map(t=>({...t}));
 const logs={};TASKS.forEach(t=>logs[t.id]=[{time:t.created,who:'yuanyihaosun（商家）',title:'创建任务',desc:'创建积分返利任务，免审核保存生效'}]);
 TASKS.filter(t=>t.status==='已终止').forEach(t=>logs[t.id].push({time:'2026-11-12 09:30',who:'平台运营（总后台）',title:'强制终止任务',desc:'原因：'+t.reason}));
-const state={screen:'s0',form:null,currentId:null,detailId:'414',agreed:false,filter:{},page:1,pageSize:10,detailFilter:{},chartTab:'订单金额'};
+const state={screen:'s0',form:null,currentId:null,detailId:'414',agreed:false,filter:{},page:1,pageSize:10,detailFilter:{},detailPage:1,chartTab:'订单金额'};
 
 /* ============ 框架渲染 ============ */
 const RAIL=[
@@ -65,7 +65,7 @@ function renderShell(){
   renderTabs();
 }
 function renderTabs(){
-  const map={sA:'新建返利任务',sC:'详细数据',sP:'平台运营配置',sB:'上架返利活动'};
+  const map={sA:'新建返利任务',sC:'查看数据详情',sP:'平台运营配置',sB:'上架返利活动'};
   let tabs=`<div class="tab" data-go="s0">首页</div><div class="tab ${state.screen==='s0'?'on':''}" data-go="s0">积分返利 <span class="tx" data-act="backList">×</span></div>`;
   if(map[state.screen])tabs+=`<div class="tab on">${map[state.screen]} <span class="tx" data-act="backList">×</span></div>`;
   tabs+='<div class="tabs-right">⟳</div>';
@@ -111,28 +111,28 @@ function renderList(){
    <div class="card"><div class="table-wrap"><table><thead><tr>
      <th style="width:90px">任务/活动ID</th><th style="width:170px">任务/活动标题</th><th style="width:120px">返利模式</th><th style="width:180px">数据</th><th style="width:88px">状态</th><th style="width:180px">返利时间</th><th style="width:145px">创建时间</th><th style="width:92px">操作</th>
    </tr></thead><tbody>${list.length?list.slice((state.page-1)*state.pageSize,state.page*state.pageSize).map(t=>{
-     const d=DETAIL[t.id],term=t.status==='已终止';
+     const d=DETAIL[t.id],term=t.status==='已终止'||t.status==='已结束';
      return `<tr><td>${t.id}</td><td><div class="cell-title" title="${t.title}">${t.title}</div></td><td>${modeTag(t.mode)}</td>
      <td><div class="cell-data">订单金额：<b>${cents(d.sum)}</b><br>返利金额：<b>${cents(d.reb)}</b><br><a data-act="detail" data-id="${t.id}">查看数据详情</a></div></td>
      <td>${statusTag(t.status)}</td><td class="muted">${t.start}<br>至 ${t.end}</td><td class="muted">${t.created}</td>
-     <td><div class="ops">${term?`<a class="dis" title="该任务已被平台终止">编辑</a>`:`<a data-act="edit" data-id="${t.id}">编辑</a>`}<a data-act="copy" data-id="${t.id}">复制</a><a data-act="logs" data-id="${t.id}">操作日志</a></div></td></tr>`
+     <td><div class="ops">${term?`<a class="dis" title="该状态不可编辑">编辑</a>`:`<a data-act="edit" data-id="${t.id}">编辑</a>`}<a data-act="copy" data-id="${t.id}">复制</a><a data-act="logs" data-id="${t.id}">操作日志</a></div></td></tr>`
    }).join(''):`<tr><td colspan="8"><div class="empty">暂无返利任务/活动，点击上方按钮创建</div></td></tr>`}</tbody></table></div>
    <div class="pager"><span>总共 ${list.length} 条数据</span>${(()=>{const p=Math.max(1,Math.ceil(list.length/state.pageSize));let h=`<button class="pg" ${state.page===1?'disabled':''} data-act="page" data-id="${state.page-1}">‹</button>`;for(let i=1;i<=p;i++)h+=`<button class="pg ${i===state.page?'on':''}" data-act="page" data-id="${i}">${i}</button>`;return h+`<button class="pg" ${state.page===p?'disabled':''} data-act="page" data-id="${state.page+1}">›</button>`})()}<select class="inp" id="pageSize" style="height:28px;width:70px"><option ${state.pageSize===10?'selected':''}>10</option><option ${state.pageSize===5?'selected':''}>5</option><option ${state.pageSize===20?'selected':''}>20</option></select><span>条/页</span></div></div>`;
   const ps=document.getElementById('pageSize');if(ps)ps.onchange=e=>{state.pageSize=+e.target.value;state.page=1;renderList()};
 }
 
 /* ============ 屏A 创建/编辑 ============ */
-function blankForm(){return{mode:'create',title:'',start:'2026-11-23T11:13',end:'2026-12-31T23:59',types:[...PHARMA],white:false,black:false,taskType:'按比例返',perX:'',perY:'',cycle:'整个活动周期',tiers:[{amount:'',points:''}],scope:'all',actTypes:[...ACTS],budget:'',unlimited:false,quota:'停止返利',agreed:false}}
+function blankForm(){return{mode:'create',title:'',start:'2026-11-23T11:13',end:'2026-12-31T23:59',types:[...PHARMA],white:false,black:false,taskType:'按比例返',perX:'',perY:'',cycle:'整个活动周期',tiers:[{amount:'',points:''}],scope:'all',actTypes:[...ACTS],imported:[],actItems:[],budget:'',unlimited:false,quota:'停止返利',agreed:false}}
 function openForm(t,mode){
   state.currentId=t?t.id:null;
   if(mode==='copy'&&t){const f=blankForm();f.title=t.title+'（副本）';f.taskType=t.mode;state.form=f}
-  else if(t){state.form={...blankForm(),mode:'edit',title:t.title,start:t.start.replace(' ','T').slice(0,16),end:t.end.replace(' ','T').slice(0,16),taskType:t.mode,budget:t.budget||'',unlimited:!t.budget,quota:t.quota||'停止返利',agreed:state.agreed,white:!!t.white,black:!!t.black,cycle:t.cycle||'整个活动周期'}}
+  else if(t){state.form={...blankForm(),mode:'edit',title:t.title,start:t.start.replace(' ','T').slice(0,16),end:t.end.replace(' ','T').slice(0,16),taskType:t.mode,budget:t.budget||'',unlimited:!t.budget,quota:t.quota||'停止返利',agreed:state.agreed,white:!!t.white,black:!!t.black,cycle:t.cycle||'整个活动周期',types:[...(t.types||PHARMA)],scope:t.scope||'all',actTypes:[...(t.actTypes||ACTS)],imported:[...(t.imported||[])],actItems:[...(t.actItems||[])]}}
   else state.form=blankForm();
   go('sA');
 }
 function renderForm(){
   if(!state.form)state.form=blankForm();
-  const F=state.form,edit=F.mode==='edit',lk=k=>edit&&['taskType','perX','perY','tiers','cycle'].includes(k);
+  const F=state.form,edit=F.mode==='edit',lk=k=>edit&&['taskType','perX','perY','tiers'].includes(k);
   const ratio=(+F.perX>0&&+F.perY>0)?(+F.perY/100/+F.perX*100).toFixed(2):'—';
   const ratioHtml=(+F.perX>0&&+F.perY>0)?`返利比例 <b>${ratio}%</b>（100积分价值1元）`:'返利比例 —';
   let tiersHtml='';
@@ -141,7 +141,7 @@ function renderForm(){
     tiersHtml=F.tiers.map((t,i)=>`<div class="tier"><div class="tier-head"><span>第 ${i+1} 档</span>${lk('tiers')||F.tiers.length<=1?'':`<a data-act="delTier" data-id="${i}" style="font-size:12px">删除</a>`}</div>
       <div class="inline"><span class="muted" style="width:104px;text-align:right">累计采购满</span><input class="mini-inp" data-f="tier-${i}-k" value="${t.amount}" placeholder="请输入" ${lk('tiers')?'disabled':''}><span class="muted">${amt?'元':'个品种'}</span><span class="muted" style="width:36px;text-align:right">${chain[i].verb}</span><input class="mini-inp" data-f="tier-${i}-v" value="${t.points}" placeholder="请输入" ${lk('tiers')?'disabled':''}><span class="muted">积分</span>${i>0?`<span class="calc" style="margin-left:10px">累计共返 <b>${chain[i].total}</b></span>`:''}</div></div>`).join('')+
       (lk('tiers')?'':`<button class="btn sm" data-act="addTier" ${F.tiers.length>=4?'disabled':''}>＋ 新增档位</button>`)+
-      `<div class="help" style="margin-top:7px">最多 4 档、至少 1 档，档位值递增且不重复；最后一档不可删除；逐档累加，累计共返自动计算，非法档位显示「—」。</div>`;
+      `<div class="help" style="margin-top:7px">按单笔订单累计采购数据命中档位，达到的每个档位都会发放、各档积分逐档累加。最多 4 档、至少 1 档，档位值递增且不重复；最后一档不可删除；累计共返自动计算，非法档位显示「—」。</div>`;
   }else{
     const badRatio=(+F.perX<=0||+F.perY<=0);
     tiersHtml=`<div class="inline"><span class="muted" style="width:18px">每满</span><input class="mini-inp" data-f="perX" value="${F.perX}" placeholder="请输入" ${lk('perX')?'disabled':''}><span class="muted">元，返</span><input class="mini-inp" data-f="perY" value="${F.perY}" placeholder="请输入" ${lk('perY')?'disabled':''}><span class="muted">积分</span><span class="calc">ⓘ ${ratioHtml}</span></div><div id="ratioErr" class="err" style="margin:5px 0 0 22px">${badRatio?'每满金额需大于 0，返积分需大于 0。':''}</div>`;
@@ -155,7 +155,7 @@ function renderForm(){
     </div>`;
   }else{
     scopeHtml=`<div class="grey-box"><div class="sub"><label>批量导入活动</label><div><button class="btn sm" data-act="import" data-id="act">选择上传</button><div class="help">导入时校验活动归属本供应商；单次不超过 10000 条；<a data-act="tmpl">模板下载</a></div></div></div>
-      <div class="sub"><label>已导入活动</label><button class="btn sm" data-act="viewImported">查看（${(F.imported||[]).length}）</button></div></div>`;
+      <div class="sub"><label>已导入活动</label><button class="btn sm" data-act="viewImported">查看（${(F.actItems||[]).length}）</button></div></div>`;
   }
   const terms=`当营销服务额度少于 <b>100</b> 元时，继续发放积分，超出部分在结算时从商家结算款中扣减。具体结算规则请阅读《药师帮平台返利活动协议》的相关内容。`;
   const steps=['基础配置','药店配置','采购要求配置','返利资金配置'];
@@ -167,7 +167,7 @@ function renderForm(){
      <div class="step-main">
       <div class="card" id="step0"><div class="card-head"><span class="card-title">基础配置</span></div><div class="card-body">
         <div class="frow"><div class="fitem"><label class="req">计划标题</label><div class="fctrl inline"><input class="inp" data-f="title" maxlength="30" value="${F.title}" placeholder="请输入标题" style="width:320px"><span class="counter">${F.title.length}/30</span></div></div></div>
-        <div class="frow"><div class="fitem"><label class="req">计划时间</label><div class="fctrl inline"><input type="datetime-local" class="inp" data-f="start" value="${F.start}" ${edit?'disabled':''} style="width:190px"><span class="muted">~</span><input type="datetime-local" class="inp" data-f="end" value="${F.end}" style="width:190px">${edit?'<span class="help">开始时间不可修改；结束时间可提前或延后，须晚于当前时间</span>':'<span class="help">开始时间可 ≤ 当前时间；结束时间须晚于当前时间</span>'}</div></div></div>
+        <div class="frow"><div class="fitem"><label class="req">计划时间</label><div class="fctrl inline"><input type="datetime-local" class="inp" data-f="start" value="${F.start}" ${edit?'disabled':''} style="width:190px"><span class="muted">~</span><input type="datetime-local" class="inp" data-f="end" value="${F.end}" style="width:190px"><span class="help">开始时间不得早于当前时间；结束时间不得早于当前时间。</span></div></div></div>
       </div></div>
 
       <div class="card" id="step1"><div class="card-head"><span class="card-title">药店配置</span></div><div class="card-body">
@@ -206,7 +206,7 @@ function renderForm(){
   document.querySelectorAll('.step').forEach(s=>s.onclick=()=>{document.querySelectorAll('.step').forEach(x=>x.classList.toggle('on',x===s));document.getElementById('step'+s.dataset.step).scrollIntoView({behavior:'smooth',block:'start'})});
 }
 
-/* ============ 屏C 详细数据 ============ */
+/* ============ 屏C 查看数据详情 ============ */
 function seriesFor(id){
   const rows=DETAIL[id].rows,map={};
   rows.forEach(r=>{const d=r.time.slice(0,10);map[d]=map[d]||{订单金额:0,返利金额:0,参与订单数:0,参与客户数:new Set()};const m=map[d];m.订单金额+=r.amt;m.返利金额+=r.reb;m.参与订单数++;m.参与客户数.add(r.customer)});
@@ -233,7 +233,10 @@ function renderChart(){
 }
 function renderDetail(){
   const t=TASKS.find(x=>x.id===state.detailId)||TASKS[0];state.detailId=t.id;const d=DETAIL[t.id],f=state.detailFilter;
-  const rows=d.rows.filter(r=>(!f.no||r.order.includes(f.no))&&(!f.cust||r.customer.includes(f.cust))&&(!f.type||r.type===f.type));
+  const filtered=d.rows.filter(r=>(!f.no||r.order.includes(f.no))&&(!f.cust||r.customer.includes(f.cust))&&(!f.type||r.type===f.type));
+  const pages=Math.max(1,Math.ceil(filtered.length/state.pageSize));
+  if(state.detailPage>pages)state.detailPage=pages;
+  const rows=filtered.slice((state.detailPage-1)*state.pageSize,state.detailPage*state.pageSize);
   document.getElementById('detailRoot').innerHTML=`
    <div class="crumb"><a data-act="backList">营销</a> / <a data-act="backList">积分返利</a> / <span>查看数据详情</span></div>
    <div class="detail-head"><a class="back" data-act="backList">← 返回</a><h2>查看数据详情</h2><span class="tag ${t.mode==='按比例返'?'blue':'green'}">${t.title.includes('活动')?'返利活动':'返利任务'}</span>
@@ -262,7 +265,8 @@ function renderDetail(){
      </div></div>
      <div class="table-wrap"><table><thead><tr><th>订单号</th><th>客户名称</th><th>统计药店类型</th><th style="text-align:right">订单金额</th><th style="text-align:right">返利金额</th><th>发放时间</th></tr></thead><tbody>
        ${rows.length?rows.map(r=>`<tr><td style="font-family:monospace;font-size:12px">${r.order}</td><td>${r.customer}</td><td>${r.type}</td><td style="text-align:right">${cents(r.amt)}</td><td style="text-align:right;color:#1a8f68">${cents(r.reb)}</td><td class="muted">${r.time}</td></tr>`).join(''):'<tr><td colspan="6"><div class="empty">暂无符合条件的返利明细</div></td></tr>'}
-     </tbody></table></div><div class="pager">总共 ${rows.length} 条数据 · 参与订单数 = 明细总条数</div></div>`;
+     </tbody></table></div><div class="pager"><span>总共 ${filtered.length} 条数据</span>${(()=>{let h=`<button class="pg" ${state.detailPage===1?'disabled':''} data-act="detailPage" data-id="${state.detailPage-1}">‹</button>`;for(let i=1;i<=pages;i++)h+=`<button class="pg ${i===state.detailPage?'on':''}" data-act="detailPage" data-id="${i}">${i}</button>`;return h+`<button class="pg" ${state.detailPage===pages?'disabled':''} data-act="detailPage" data-id="${state.detailPage+1}">›</button>`})()}<select class="inp" id="detailPageSize" style="height:28px;width:70px"><option ${state.pageSize===10?'selected':''}>10</option><option ${state.pageSize===5?'selected':''}>5</option><option ${state.pageSize===20?'selected':''}>20</option></select><span>条/页</span></div></div>`;
+  const dps=document.getElementById('detailPageSize');if(dps)dps.onchange=e=>{state.pageSize=+e.target.value;state.detailPage=1;renderDetail()};
   renderChart();
 }
 
@@ -298,7 +302,7 @@ function openAgreement(){
   openModal(`<div class="modal-head"><h3>《药师帮平台返利活动协议》</h3><button class="x" data-close-modal>×</button></div>
    <div class="modal-body"><div class="agreement-text" id="agreementText">
     <h4>一、服务说明</h4><p>本协议由药师帮平台与入驻供应商就使用「积分返利」工具向采购客户发放返利积分事宜订立。商家在现有商品上叠加返利规则，不改变商品挂网价；客户采购达成约定条件后，由平台按规则向客户账户发放积分。</p>
-    <h4>二、返利规则与积分口径</h4><p>积分返利支持按比例返、累计金额满返、累计 SKU 数满返三种类型；满返最多四档、命中多档取最高档不叠加。积分按整数倍向下取整发放，100 积分价值 1 元。任务创建后免审核、按计划时间生效；任务类型与返利设置创建后不可修改，如需变更须终止原任务并新建。</p>
+    <h4>二、返利规则与积分口径</h4><p>积分返利支持按比例返、累计金额满返、累计 SKU 数满返三种类型；满返最多四档，达到的每个档位都会发放、各档积分逐档累加。积分按整数倍向下取整发放，100 积分价值 1 元。任务创建后免审核、按计划时间生效；任务类型与返利设置创建后不可修改，如需变更须终止原任务并新建。</p>
     <h4>三、出资与结算</h4><p>返利所需资金由商家全额出资，平台代发代结，优先从商家营销服务额度扣减。商家可设置返利总预算作为出资上限，达到上限即停止发放，已发放积分不受影响。当营销服务额度少于平台配置阈值（默认 100 元）且商家选择「继续返利」时，超出部分直接计入商家结算账单科目，在结算时从商家结算款中扣减。</p>
     <p>订单退款时按退款后金额与当前配置重新计算应发积分，应发少于已发的差额予以扣回；商家账单按退款后口径冲减一次，后续抵扣回收款归平台所有，不向商家二次计费、亦不退费。因扣回导致客户积分余额不足时允许扣成负值，不冻结账户、不阻塞参与其他任务。</p>
     <h4>四、积分有效期与过期处理</h4><p>返利积分接入平台既有积分有效期链路，按发放批次计效期（返利来源积分默认规则为 12 个月）。有效期届满未兑换的返利积分不退回商家、不冲减商家成本，统一沉淀为平台兜底池，可跨商家、跨任务调剂。</p>
@@ -323,21 +327,27 @@ function handleAct(act,id){
     case 'search':state.filter={id:document.getElementById('fId').value.trim(),name:document.getElementById('fName').value.trim(),status:document.getElementById('fStatus').value};state.page=1;renderList();break;
     case 'reset':['fId','fName','fStatus'].forEach(x=>document.getElementById(x).value='');state.filter={};state.page=1;renderList();break;
     case 'page':state.page=+id;renderList();break;
-    case 'detail':state.detailId=id;state.chartTab='订单金额';state.detailFilter={};go('sC');break;
-    case 'detailSearch':state.detailFilter={no:document.getElementById('dfNo').value.trim(),cust:document.getElementById('dfCust').value.trim(),type:document.getElementById('dfType').value};renderDetail();break;
+    case 'detail':state.detailId=id;state.chartTab='订单金额';state.detailFilter={};state.detailPage=1;go('sC');break;
+    case 'detailSearch':state.detailFilter={no:document.getElementById('dfNo').value.trim(),cust:document.getElementById('dfCust').value.trim(),type:document.getElementById('dfType').value};state.detailPage=1;renderDetail();break;
+    case 'detailPage':state.detailPage=+id;renderDetail();break;
     case 'ctab':state.chartTab=id;renderDetail();break;
-    case 'exportList':toast('导出任务已创建，共 '+TASKS.length+' 条；审计日志已记录（商家侧不可见）');break;
-    case 'exportDetail':toast('明细导出任务已创建；审计日志已记录导出人 / 时间 / 筛选条件 / 条数 / 文件标识');break;
+    case 'exportList':{const f=state.filter;const n=TASKS.filter(t=>(!f.id||t.id===f.id)&&(!f.name||t.title.includes(f.name))&&(!f.status||t.status===f.status)).length;toast('导出任务已创建，共 '+n+' 条（当前筛选结果）；审计日志已记录导出人 / 时间 / 筛选条件 / 条数 / 文件标识（商家侧不可见）');break}
+    case 'exportDetail':{const f=state.detailFilter;const t=TASKS.find(x=>x.id===state.detailId)||TASKS[0];const n=DETAIL[t.id].rows.filter(r=>(!f.no||r.order.includes(f.no))&&(!f.cust||r.customer.includes(f.cust))&&(!f.type||r.type===f.type)).length;toast('明细导出任务已创建，共 '+n+' 条（当前筛选结果）；审计日志已记录导出人 / 时间 / 筛选条件 / 条数 / 文件标识');break}
     case 'logs':{const l=logs[id]||[];openModal(`<div class="modal-head"><h3>修改记录 · ${id}</h3><button class="x" data-close-modal>×</button></div><div class="modal-body">${l.map(x=>`<div class="log-item"><div class="lt">操作时间：${x.time}</div><div class="lh">${x.title} <span class="muted" style="font-weight:400">· 操作人：${x.who}</span></div><div class="lb">${x.desc}</div>${x.changes&&x.changes.length?`<table style="margin-top:6px;width:100%;font-size:12px;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:4px 6px;background:#f7f9fc">变更项</th><th style="text-align:left;padding:4px 6px;background:#f7f9fc">修改前</th><th style="text-align:left;padding:4px 6px;background:#f7f9fc">修改后</th></tr></thead><tbody>${x.changes.map(c=>`<tr><td style="padding:4px 6px;border-bottom:1px solid #eef1f5">${c.k}</td><td style="padding:4px 6px;border-bottom:1px solid #eef1f5;color:#9aa3b0">${c.b}</td><td style="padding:4px 6px;border-bottom:1px solid #eef1f5;color:#1a8f68">${c.a}</td></tr>`).join('')}</tbody></table>`:''}</div>`).join('')}</div><div class="modal-foot"><button class="btn" data-close-modal>关闭</button></div>`);break}
     case 'addTier':if(F.tiers.length<4){F.tiers.push({amount:'',points:''});renderForm()}break;
     case 'delTier':F.tiers.splice(+id,1);renderForm();break;
     case 'checkAllAct':F.actTypes=F.actTypes.length===ACTS.length?[]:[...ACTS];renderForm();break;
     case 'tmpl':toast('模板已生成下载（Demo 模拟）');break;
     case 'upload':F[id]=!F[id];renderForm();toast(F[id]?'已选择组织（Demo 模拟）':'已取消选择');break;
-    case 'import':openModal(`<div class="modal-head"><h3>批量导入${id==='sku'?'品种':'活动'}</h3><button class="x" data-close-modal>×</button></div><div class="modal-body"><div class="filter-bar" style="margin-bottom:10px"><input class="inp" id="impSearch" placeholder="按 ID / 名称搜索" style="width:300px"></div><div id="impList">${['阿莫西林胶囊 0.25g','维生素C片 100mg','布洛芬缓释胶囊','苯磺酸氨氯地平片','感冒灵颗粒'].map((n,i)=>`<label style="display:flex;gap:8px;padding:8px;border-bottom:1px solid #f0f2f6;align-items:center"><input type="checkbox" class="impChk" value="${n}"><span class="muted">${id==='sku'?'SPU':'HD'}2026${String(1000+i)}</span> ${n}</label>`).join('')}</div></div><div class="modal-foot"><button class="btn" data-close-modal>取消</button><button class="btn primary" id="impConfirm">确认导入</button></div>`);
-      document.getElementById('impConfirm').onclick=()=>{const sel=[...document.querySelectorAll('.impChk:checked')].map(x=>x.value);F.imported=[...new Set([...(F.imported||[]),...sel])];closeModal();renderForm();toast('已导入 '+sel.length+' 条'+(id==='act'?'（归属校验通过）':''))};
+    case 'import':openModal(`<div class="modal-head"><h3>批量导入${id==='sku'?'品种':'活动'}</h3><button class="x" data-close-modal>×</button></div><div class="modal-body"><div class="filter-bar" style="margin-bottom:10px"><input class="inp" id="impSearch" placeholder="按 ID / 名称搜索" style="width:300px"></div><div id="impList">${['阿莫西林胶囊 0.25g','维生素C片 100mg','布洛芬缓释胶囊','苯磺酸氨氯地平片','感冒灵颗粒'].map((n,i)=>`<label style="display:flex;gap:8px;padding:8px;border-bottom:1px solid #f0f2f6;align-items:center"><input type="checkbox" class="impChk" value="${n}" data-aid="${id==='sku'?'SPU':'HD'}2026${String(1000+i)}"><span class="muted">${id==='sku'?'SPU':'HD'}2026${String(1000+i)}</span> ${n}</label>`).join('')}</div></div><div class="modal-foot"><button class="btn" data-close-modal>取消</button><button class="btn primary" id="impConfirm">确认导入</button></div>`);
+      document.getElementById('impConfirm').onclick=()=>{const sel=[...document.querySelectorAll('.impChk:checked')];if(id==='act'){F.actItems=[...(F.actItems||[]),...sel.map(x=>({id:x.dataset.aid,name:x.value,vendor:'康佰医药',spec:'0.25g × 24粒/盒'}))]}
+        F.imported=[...new Set([...(F.imported||[]),...sel.map(x=>x.value)])];closeModal();renderForm();toast('已导入 '+sel.length+' 条'+(id==='act'?'（归属校验通过）':''))};
       document.getElementById('impSearch').oninput=e=>{const v=e.target.value;document.querySelectorAll('#impList label').forEach(l=>l.style.display=l.textContent.includes(v)?'flex':'none')};break;
-    case 'viewImported':openModal(`<div class="modal-head"><h3>已导入清单（${(F.imported||[]).length}）</h3><button class="x" data-close-modal>×</button></div><div class="modal-body">${(F.imported||[]).length?F.imported.map(n=>`<div style="padding:8px;border-bottom:1px solid #f0f2f6">${n}</div>`).join(''):'<div class="empty">暂未导入</div>'}</div><div class="modal-foot"><button class="btn" data-close-modal>关闭</button></div>`);break;
+    case 'viewImported':{const items=F.actItems||[];
+      openModal(`<div class="modal-head"><h3>查看已导入的活动信息（${items.length}）</h3><button class="x" data-close-modal>×</button></div><div class="modal-body"><div class="filter-bar" style="margin-bottom:10px"><input class="inp" id="actImpSearch" placeholder="按活动 id / 活动名称搜索" style="width:320px"></div><div class="table-wrap"><table><thead><tr><th>活动id</th><th>活动名称</th><th>厂家</th><th>规格·包装</th><th>操作</th></tr></thead><tbody id="actImpBody">${items.length?items.map((a,i)=>`<tr data-txt="${a.id} ${a.name}"><td style="font-family:monospace;font-size:12px">${a.id}</td><td>${a.name}</td><td>${a.vendor||'康佰医药'}</td><td>${a.spec||'0.25g × 24粒/盒'}</td><td><a data-act="editAct" data-id="${i}">编辑</a> <a data-act="delAct" data-id="${i}">删除</a></td></tr>`).join(''):'<tr><td colspan="5"><div class="empty">暂未导入活动</div></td></tr>'}</tbody></table></div></div><div class="modal-foot"><button class="btn" data-close-modal>关闭</button></div>`,true);
+      document.getElementById('actImpSearch').oninput=e=>{const v=e.target.value.trim();document.querySelectorAll('#actImpBody tr').forEach(tr=>{if(!tr.dataset.txt)return;tr.style.display=!v||tr.dataset.txt.includes(v)?'':'none'})};break}
+    case 'editAct':{const a=(F.actItems||[])[+id];if(!a)break;openModal(`<div class="modal-head"><h3>编辑已导入活动</h3><button class="x" data-close-modal>×</button></div><div class="modal-body"><div class="frow"><div class="fitem"><label>活动id</label><div class="fctrl"><input class="inp" id="eaId" value="${a.id}" style="width:280px"></div></div></div><div class="frow"><div class="fitem"><label>活动名称</label><div class="fctrl"><input class="inp" id="eaName" value="${a.name}" style="width:280px"></div></div></div><div class="frow"><div class="fitem"><label>厂家</label><div class="fctrl"><input class="inp" id="eaVendor" value="${a.vendor||'康佰医药'}" style="width:280px"></div></div></div><div class="frow"><div class="fitem"><label>规格·包装</label><div class="fctrl"><input class="inp" id="eaSpec" value="${a.spec||'0.25g × 24粒/盒'}" style="width:280px"></div></div></div></div><div class="modal-foot"><button class="btn" data-close-modal>取消</button><button class="btn primary" id="eaSave">保存</button></div>`);document.getElementById('eaSave').onclick=()=>{a.id=document.getElementById('eaId').value.trim()||a.id;a.name=document.getElementById('eaName').value.trim()||a.name;a.vendor=document.getElementById('eaVendor').value.trim();a.spec=document.getElementById('eaSpec').value.trim();closeModal();renderForm();toast('活动信息已更新')};break}
+    case 'delAct':if((F.actItems||[])[+id]){F.actItems.splice(+id,1);renderForm();toast('已删除 1 条活动')}break;
     case 'agreement':openAgreement();break;
     case 'buyQuota':toast('跳转购买营销服务额度页（Demo 模拟）');break;
     case 'quotaLog':openModal(`<div class="modal-head"><h3>营销账户流水</h3><button class="x" data-close-modal>×</button></div><div class="modal-body"><table><thead><tr><th>时间</th><th>业务类型</th><th>来源</th><th style="text-align:right">变动金额</th><th style="text-align:right">余额</th></tr></thead><tbody><tr><td>2026-11-22 18:20</td><td><span class="tag green">返利退款</span></td><td>返利任务 414</td><td style="text-align:right;color:#1a8f68">+160.00</td><td style="text-align:right">2,726.55</td></tr><tr><td>2026-11-22 14:03</td><td><span class="tag blue">返利支出</span></td><td>返利任务 414</td><td style="text-align:right;color:#c25656">-200.00</td><td style="text-align:right">2,566.55</td></tr></tbody></table></div><div class="modal-foot"><button class="btn" data-close-modal>关闭</button></div>`);break;
@@ -345,7 +355,8 @@ function handleAct(act,id){
       if(!F.agreed){toast('请先阅读并同意协议',true);return}
       if(!F.title.trim()){toast('请填写计划标题',true);return}
       if(!F.types.length){toast('至少保留 1 项统计药店类型',true);return}
-      if(+new Date(F.end)<=now){toast('结束时间必须晚于当前时间',true);return}
+      if(F.mode!=='edit'&&+new Date(F.start)<now){toast('开始时间不得早于当前时间',true);return}
+      if(+new Date(F.end)<=now){toast('结束时间不得早于当前时间',true);return}
       if(F.taskType!=='按比例返'){const ks=F.tiers.map(t=>+t.amount||0);if(ks.some(k=>k<=0)||ks.some((k,i)=>i>0&&k<=ks[i-1])){toast('档位值须大于 0 且递增、不重复',true);return}}
       else if(+F.perX<=0||+F.perY<=0){toast('每满金额与返积分均须大于 0',true);return}
       if(F.budget&&!F.unlimited&&+F.budget<10000){toast('填写时不得小于 10000 元',true);return}
@@ -353,10 +364,11 @@ function handleAct(act,id){
       if(F.mode==='edit'){
         const t=TASKS.find(x=>x.id===state.currentId);
         if(t&&F.budget&&!F.unlimited&&t.budget&&+F.budget<+t.budget){toast('进行中任务仅可上调返利总预算，不可下调',true);return}
-        if(t){const ov={title:t.title,end:t.end,budget:t.budget||'不限',quota:t.quota,white:t.white?'已上传':'未上传',black:t.black?'已上传':'未上传'};
-          const ch=[{k:'计划标题',b:ov.title,a:F.title},{k:'结束时间',b:ov.end,a:F.end.replace('T',' ')+':00'},{k:'返利总预算',b:ov.budget,a:F.unlimited?'不限':F.budget},{k:'余额不足时',b:ov.quota,a:F.quota},{k:'客户白名单',b:ov.white,a:F.white?'已上传':'未上传'},{k:'客户黑名单',b:ov.black,a:F.black?'已上传':'未上传'}].filter(c=>c.b!==c.a);
-          t.title=F.title;t.end=F.end.replace('T',' ')+':00';t.budget=F.unlimited?'':F.budget;t.quota=F.quota;t.white=F.white;t.black=F.black;
-          logs[t.id].push({time:now.toLocaleString('zh-CN',{hour12:false}),who:'yuanyihaosun（商家）',title:'编辑任务',desc:'修改计划标题、结束时间、药店配置与资金配置',changes:ch})}
+        if(t){const fmtTypes=v=>(v||[]).join('、')||'未选择',fmtScope=v=>v==='all'?'全量品种，黑名单除外':'仅指定活动';
+          const ov={title:t.title,end:t.end,budget:t.budget||'不限',quota:t.quota,white:t.white?'已上传':'未上传',black:t.black?'已上传':'未上传',types:fmtTypes(t.types||PHARMA),cycle:t.cycle||'整个活动周期',scope:fmtScope(t.scope||'all')};
+          const ch=[{k:'计划标题',b:ov.title,a:F.title},{k:'结束时间',b:ov.end,a:F.end.replace('T',' ')+':00'},{k:'统计药店类型',b:ov.types,a:fmtTypes(F.types)},{k:'统计周期',b:ov.cycle,a:F.cycle},{k:'参与返利的活动',b:ov.scope,a:fmtScope(F.scope)},{k:'返利总预算',b:ov.budget,a:F.unlimited?'不限':F.budget},{k:'余额不足时',b:ov.quota,a:F.quota},{k:'客户白名单',b:ov.white,a:F.white?'已上传':'未上传'},{k:'客户黑名单',b:ov.black,a:F.black?'已上传':'未上传'}].filter(c=>c.b!==c.a);
+          t.title=F.title;t.end=F.end.replace('T',' ')+':00';t.types=[...F.types];t.cycle=F.cycle;t.scope=F.scope;t.actTypes=[...(F.actTypes||[])];t.imported=[...(F.imported||[])];t.actItems=[...(F.actItems||[])];t.budget=F.unlimited?'':F.budget;t.quota=F.quota;t.white=F.white;t.black=F.black;
+          logs[t.id].push({time:now.toLocaleString('zh-CN',{hour12:false}),who:'yuanyihaosun（商家）',title:'编辑任务',desc:'修改计划标题、结束时间、药店配置、采购要求配置与资金配置',changes:ch})}
         toast('修改已保存，按计划时间继续生效');
       }else{
         const id=String(Math.max(...TASKS.map(t=>+t.id))+1),start=F.start.replace('T',' ')+':00',end=F.end.replace('T',' ')+':00';
